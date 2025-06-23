@@ -1,0 +1,255 @@
+import numpy as np
+
+class NN:
+    # neural network creation
+    # create structure x0 - > w0Tx0 -> x1  -> w1Tx1 - > x2 -> w2Tx2 -> ...... until we get final output y'
+    # user creates hidden layers nodes
+    # At the base case we get a dense connection to one output node
+    def __init__(self,hidden_layers = 0 , neuron_depth = [] , loss = "sse"):
+        self.hidden_layers = hidden_layers
+        self.neuron_depth = neuron_depth
+        self.loss = loss
+        self.hidden_layers += 1
+        self.neuron_depth += [1]
+
+        if 0 in self.neuron_depth:
+            raise ValueError("node values must be greater than 0")
+        if len(self.neuron_depth) != self.hidden_layers:
+            raise ValueError("Incompatible Network Shape , Neurons must be mapped to each layer ie layers = 2 ,"
+                             + "neuron_depth = [4,2] , 4 nodes in layer 1 , 2 nodes in layer 2")
+        if self.loss != "sse":
+            return ValueError("only sse" + "sum of squared error loss supported")
+
+
+    def sse_sigmoid_gradient(self, ground_truth , prediction , variable):
+        delta = (ground_truth - prediction) * (1 - prediction) * (variable)
+        return delta
+
+    def sse_relu_gradient(self, ground_truth , prediction , variable):
+        if prediction <= 0:
+            return 1
+        else:
+            delta = (ground_truth - prediction) * variable
+            return delta
+        
+
+    class Layer(): # so input from inital vector or the previous layer then does the calcuation to output to next layer
+       def __init__(self , input_vector = [] , nodes = 1 , activation = "sigmoid" , next = None):
+           self.input_vector = input_vector
+           self.nodes = nodes
+           self.activation = activation
+           self.next = next
+
+       def sse(self,ground_truth , prediction):
+           error = (ground_truth - prediction) ** 2
+           return error
+
+       def sigmoid(self,x): 
+           s = np.exp(-x)
+           s = (1 / (1 + s))
+           return s
+
+       def ReLU(self,x):
+           if x <= 0: # technically wrog because it real values function arent differentiable on corners so x = 0 is undefined
+                # however for this case we will leave it
+               return 0
+           else:
+               return x
+
+       def create_layer_pass(self , weight = 0.5 , err_lis = [] , pred = None , possible_matrix = None): # supports only sigmoid
+           if possible_matrix == None:
+                m = len(self.input_vector)
+                n = self.nodes
+                lis = [weight for x in range(m * n)]
+                weight_matrix = np.reshape(lis , (m , n))
+                output_vector = np.transpose(weight_matrix) @ self.input_vector
+                if self.activation == "sigmoid":
+                    output_vector = self.sigmoid(output_vector)
+                    for s in range(len(err_lis)):
+                        err_lis[s].append(self.sse(output_vector[s],pred))
+                elif self.activation == "relu":
+                    output_vector = self.ReLU(output_vector)
+                    for s in range(len(err_lis)):
+                        err_lis[s].append(self.sse(output_vector[s],pred))
+                else:
+                    raise ValueError("activation not supported , supported activation {sigmoid , relu} , network activations only sigmoid or relu")
+                return output_vector
+           else: # for gradient descent 
+                m = len(self.input_vector)
+                n = self.nodes
+                possible_matrix = np.reshape(possible_matrix , (m , n))
+                output_vector = np.transpose(possible_matrix) @ self.input_vector
+                if self.activation == "sigmoid":
+                    output_vector = self.sigmoid(output_vector)
+                    for s in range(len(err_lis)):
+                        err_lis[s].append(self.sse(output_vector[s],pred))
+                elif self.activation == "relu":
+                    output_vector = self.ReLU(output_vector)
+                    for s in range(len(err_lis)):
+                        err_lis[s].append(self.sse(output_vector[s],pred))
+                else:
+                    raise ValueError("activation not supported , supported activation {sigmoid , relu} , network activations only sigmoid or relu")
+                return output_vector
+
+
+    def fit(self , X = None , Y = None , batch_size = None , learning_rate = 0.0000005 , beta = 0.3):
+        error_cache = [[[] for x in range(n)] for n in self.neuron_depth]
+        batch_counter = 0
+        weight_initial = 0
+        for i in range(len(X)):
+            # iterate through data set
+            res = X[i]
+            if batch_counter == batch_size:
+                pass
+            else:
+                for layers in range(len(self.neuron_depth)): # full pass through network
+                    res = self.Layer(input_vector = res , nodes = self.neuron_depth[layers]).create_layer_pass(err_lis = error_cache[layers], pred = Y[i])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            batch_counter += 1
+            print(res)
+
+            
+
+
+
+
+
+
+
+
+lols = NN(3 ,[3,4,2]).fit(X = [[2,3,4,6],[3,6,7,8],[3,7,8,0]], Y = [3,6,9])
+
+
+                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           
+
+        
+
+
+
+
+
+
+
+            
+
+
+
+
+
+
+            
+
+
+            
+
+
+
