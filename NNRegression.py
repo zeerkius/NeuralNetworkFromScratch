@@ -20,18 +20,9 @@ class NN:
         if self.loss != "sse":
             return ValueError("only sse" + "sum of squared error loss supported")
 
-
-    def sse_sigmoid_gradient(self, ground_truth , prediction , variable):
-        delta = (ground_truth - prediction) * (1 - prediction) * (variable)
-        return delta
-
-    def sse_relu_gradient(self, ground_truth , prediction , variable):
-        if prediction <= 0:
-            return 1
-        else:
-            delta = (ground_truth - prediction) * variable
-            return delta
-        
+    def sse(self,x , y):
+        batch_error = (sum(x) - sum(y)) ** 2
+        return batch_error
 
     class Layer(): # so input from inital vector or the previous layer then does the calcuation to output to next layer
        def __init__(self , input_vector = [] , nodes = 1 , activation = "sigmoid" , next = None):
@@ -40,9 +31,17 @@ class NN:
            self.activation = activation
            self.next = next
 
-       def sse(self,ground_truth , prediction):
-           error = (ground_truth - prediction) ** 2
-           return error
+       def sse_sigmoid_gradient(self, ground_truth , prediction , variable):
+           delta = (ground_truth - prediction) * (1 - prediction) * (variable)
+           return delta
+
+       def sse_relu_gradient(self, ground_truth , prediction , variable):
+           if prediction <= 0:
+               return 1
+           else:
+               delta = (ground_truth - prediction) * variable
+               return delta
+
 
        def sigmoid(self,x): 
            s = np.exp(-x)
@@ -66,11 +65,11 @@ class NN:
                 if self.activation == "sigmoid":
                     output_vector = self.sigmoid(output_vector)
                     for s in range(len(err_lis)):
-                        err_lis[s].append(self.sse(output_vector[s],pred))
+                        err_lis[s].append(self.sse_sigmoid_gradient(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s]))
                 elif self.activation == "relu":
                     output_vector = self.ReLU(output_vector)
                     for s in range(len(err_lis)):
-                        err_lis[s].append(self.sse(output_vector[s],pred))
+                        err_lis[s].append(self.sse_relu_sigmoid(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s]))
                 else:
                     raise ValueError("activation not supported , supported activation {sigmoid , relu} , network activations only sigmoid or relu")
                 return output_vector
@@ -82,44 +81,39 @@ class NN:
                 if self.activation == "sigmoid":
                     output_vector = self.sigmoid(output_vector)
                     for s in range(len(err_lis)):
-                        err_lis[s].append(self.sse(output_vector[s],pred))
+                        err_lis[s].append(self.sse_sigmoid_gradient(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s]))
                 elif self.activation == "relu":
                     output_vector = self.ReLU(output_vector)
                     for s in range(len(err_lis)):
-                        err_lis[s].append(self.sse(output_vector[s],pred))
+                        err_lis[s].append(self.sse_relu_sigmoid(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s]))
                 else:
                     raise ValueError("activation not supported , supported activation {sigmoid , relu} , network activations only sigmoid or relu")
                 return output_vector
 
 
     def fit(self , X = None , Y = None , batch_size = None , learning_rate = 0.0000005 , beta = 0.3):
+        if batch_size <= 10:
+            raise ValueError(" SGD not supported mini batch must be greater than 10")
         error_cache = [[[] for x in range(n)] for n in self.neuron_depth]
         batch_counter = 0
-        weight_initial = 0
+        weight_initial = [0.5 for i in range(len(self.hidden_layers))] # each previous layer is intialized the same
+        velocity = 0
         for i in range(len(X)):
             # iterate through data set
             res = X[i]
-            if batch_counter == batch_size:
-                pass
+            if batch_counter % batch_size == 0:
+                # iterate through the error cache
+                # Let user know model status
+                print(" The current model error is " + str(self.sse(X[batch_counter -  batch_size : batch_size] , Y[batch_counter -  batch_size : batch_size])) , end = "\n")
+                for vec in range(len(error_cache))[::-1]:  # backwards layer wise updating works exactly like back propogation for only last layer , other weights are averaged
+                    # back propogation needs work
+                    for wi in range(len(error_cache[vec]))[::-1]:
+                        velocity = (velocity * beta) * ((1 - beta) * (sum(vec[wi])))
+                        weight_initial[vec] -= velocity * learning_rate 
+                error_cache = [[[] for x in range(n)] for n in self.neuron_depth]
             else:
                 for layers in range(len(self.neuron_depth)): # full pass through network
-                    res = self.Layer(input_vector = res , nodes = self.neuron_depth[layers]).create_layer_pass(err_lis = error_cache[layers], pred = Y[i])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                    res = self.Layer(input_vector = res , nodes = self.neuron_depth[layers]).create_layer_pass(err_lis = error_cache[layers],weight = weight_initial[layers], pred = Y[i])
             batch_counter += 1
             print(res)
 
@@ -132,10 +126,11 @@ class NN:
 
 
 
-lols = NN(3 ,[3,4,2]).fit(X = [[2,3,4,6],[3,6,7,8],[3,7,8,0]], Y = [3,6,9])
+lols = NN(3 ,[3,4,2]).fit(X = [[2,3,4,6],[3,6,7,8],[3,7,8,0]], Y = [3,6,9] )
 
 
                 
+
 
 
 
