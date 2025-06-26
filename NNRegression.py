@@ -9,6 +9,8 @@ class NN:
         self.hidden_layers = hidden_layers
         self.neuron_depth = neuron_depth
         self.loss = loss
+        if len(set(self.neuron_depth)) != 1:
+            raise ValueError("All nodes must be of same size  [3,3,3] , some variations like [3,4,2] work however are not allowed in this version ")
         self.hidden_layers += 1
         self.neuron_depth += [1]
 
@@ -55,7 +57,7 @@ class NN:
            else:
                return x
 
-       def create_layer_pass(self , weight = 0.5 , err_lis = [] , pred = None , possible_matrix = None): # supports only sigmoid
+       def create_layer_pass(self , weight = 0.5 , err_lis = None , pred = None , possible_matrix = None): # supports only sigmoid
            if possible_matrix == None:
                 m = len(self.input_vector)
                 n = self.nodes
@@ -65,11 +67,12 @@ class NN:
                 if self.activation == "sigmoid":
                     output_vector = self.sigmoid(output_vector)
                     for s in range(len(err_lis)):
-                        err_lis[s].append(self.sse_sigmoid_gradient(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s]))
+                        err_lis[s].append(self.sse_sigmoid_gradient(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s-1]))
+                        # proper indexing to avoid collistion
                 elif self.activation == "relu":
                     output_vector = self.ReLU(output_vector)
                     for s in range(len(err_lis)):
-                        err_lis[s].append(self.sse_relu_sigmoid(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s]))
+                        err_lis[s].append(self.sse_relu_gradient(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s-1]))
                 else:
                     raise ValueError("activation not supported , supported activation {sigmoid , relu} , network activations only sigmoid or relu")
                 return output_vector
@@ -81,11 +84,11 @@ class NN:
                 if self.activation == "sigmoid":
                     output_vector = self.sigmoid(output_vector)
                     for s in range(len(err_lis)):
-                        err_lis[s].append(self.sse_sigmoid_gradient(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s]))
+                        err_lis[s].append(self.sse_sigmoid_gradient(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s-1]))
                 elif self.activation == "relu":
                     output_vector = self.ReLU(output_vector)
                     for s in range(len(err_lis)):
-                        err_lis[s].append(self.sse_relu_sigmoid(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s]))
+                        err_lis[s].append(self.sse_relu_sigmoid(ground_truth=pred,prediction = output_vector[s],variable = self.input_vector[s-1]))
                 else:
                     raise ValueError("activation not supported , supported activation {sigmoid , relu} , network activations only sigmoid or relu")
                 return output_vector
@@ -96,110 +99,28 @@ class NN:
             raise ValueError(" SGD not supported mini batch must be greater than 10")
         error_cache = [[[] for x in range(n)] for n in self.neuron_depth]
         batch_counter = 0
-        weight_initial = [0.5 for i in range(len(self.hidden_layers))] # each previous layer is intialized the same
+        weight_initial = [0.5 for i in range(self.hidden_layers)] # each previous layer is intialized the same
         velocity = 0
         for i in range(len(X)):
             # iterate through data set
             res = X[i]
-            if batch_counter % batch_size == 0:
+            if batch_counter % batch_size == 0 and batch_counter != 0:
                 # iterate through the error cache
                 # Let user know model status
-                print(" The current model error is " + str(self.sse(X[batch_counter -  batch_size : batch_size] , Y[batch_counter -  batch_size : batch_size])) , end = "\n")
+                print(" The current batch error is " + str(self.sse(X[batch_counter - batch_size : batch_counter] , Y[batch_counter - batch_size : batch_counter])) , end = "\n")
                 for vec in range(len(error_cache))[::-1]:  # backwards layer wise updating works exactly like back propogation for only last layer , other weights are averaged
                     # back propogation needs work
                     for wi in range(len(error_cache[vec]))[::-1]:
-                        velocity = (velocity * beta) * ((1 - beta) * (sum(vec[wi])))
+                        velocity = (velocity * beta) * ((1 - beta) * (sum(error_cache[vec][wi])))
                         weight_initial[vec] -= velocity * learning_rate 
                 error_cache = [[[] for x in range(n)] for n in self.neuron_depth]
             else:
                 for layers in range(len(self.neuron_depth)): # full pass through network
-                    res = self.Layer(input_vector = res , nodes = self.neuron_depth[layers]).create_layer_pass(err_lis = error_cache[layers],weight = weight_initial[layers], pred = Y[i])
+
+                    res = self.Layer(input_vector = res, nodes = self.neuron_depth[layers]).create_layer_pass(err_lis = error_cache[layers],weight = weight_initial[layers], pred = Y[i])
             batch_counter += 1
-            print(res)
 
             
-
-
-
-
-
-
-
-
-lols = NN(3 ,[3,4,2]).fit(X = [[2,3,4,6],[3,6,7,8],[3,7,8,0]], Y = [3,6,9] )
-
-
-                
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-       
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
-
-
-
-
-
-
-
-
-
 
 
 
